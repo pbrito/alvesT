@@ -33,7 +33,8 @@ sagaMiddleware.run(mySaga)
 class alvesT extends Component {
   constructor(props) {
     super(props);
-    this.state = {mesas: [] ,contadorConta:0,dataComeco:0};
+    this.state = {mesas: [] ,
+                  tempoPassa:0,contadorConta:0,dataComeco:0};
 
   }
 
@@ -169,7 +170,12 @@ class alvesT extends Component {
           let primeButao=()=> console.log("nada");
           if(cor=="#2EBF1B" || cor=="red" ){
                       primeButao=() =>{
-                          store.dispatch({type:"SHOW_PAGINA",
+                        let d0= new Date();
+                        var intervalo = d0 - this.state.tempoPassa;
+                        if (intervalo>3000)
+                            {
+                              this.setState({tempoPassa:d0});
+                              store.dispatch({type:"SHOW_PAGINA",
                                         payload:{
                                           pagina:"CONTA",
                                           mesa:a.mesa,
@@ -177,6 +183,11 @@ class alvesT extends Component {
                                           documento: a.doc,
                                         }
                                       })
+                            }
+                            else {
+                              console.log("nada");
+
+                            }
                         }
           }
           return(

@@ -185,45 +185,44 @@ export function certificado(doc){
     }
     return(
       <View style={{top:100}}>
-        <View  style={{flex: 1, flexDirection: 'column',
-                      paddingTop:10,
-                      alignItems:'center',
-                      justifyContent:'center',}} >
-                      <Text style={{textAlign: 'center',
-                                  width: Dimensions.get('window').width
-                      }}>
-                        {fraseCHK(doc.ultimaOrderReference )}
-                      </Text>
+      <View  style={{flex: 1, flexDirection: 'column',
+                    paddingTop:10,
+                    alignItems:'center',
+                    justifyContent:'center',}} >
+                    <Text style={{textAlign: 'center',
+                                width: Dimensions.get('window').width
+                    }}>
+                      {fraseCHK(doc.ultimaOrderReference )}
+                    </Text>
 
-          <View style={{
-                    borderColor: 'gray', borderWidth: 1,
+        <View style={{
+                  borderColor: 'gray', borderWidth: 1,
+                  paddingLeft:20,
+                  paddingRight:20,}}>
+            <View >
+              <Text style={{paddingBottom:10, textAlign: 'center'}}>
+                 IVA
+              </Text>
+            </View>
+            <View >
+              <Text style={{textAlign: 'center',paddingBottom:10}}>
+               * 13%   ......    {ivas[1]}     + 23%   ......    {ivas[0]}    - Comb
+              </Text>
+            </View>
 
-                    paddingLeft:20,
-                    paddingRight:20,}}>
-              <View style={{flex: 1}}>
-                <Text style={{paddingBottom:10, textAlign: 'center'}}>
-                   IVA
-                </Text>
-              </View>
-              <View style={{flex: 1,flexDirection: 'row',}}>
-                <Text style={{textAlign: 'center'}}>
-                 * 13%   ......    {ivas[1]}     + 23%   ......    {ivas[0]}    - Comb
-                </Text>
-              </View>
-
-          </View>
-          <Text >
-            {ultimaHash}
-            -Processado por programa certificado nº 2280/AT
-          </Text>
-          <View style={{height:150}}>
-
-          </View>
+        </View>
+        <Text >
+          {ultimaHash}
+          -Processado por programa certificado nº 2280/AT
+        </Text>
+        <View style={{height:150}}>
 
         </View>
 
-
       </View>
+
+
+    </View>
     )
 
 

@@ -4,6 +4,8 @@ import { Map ,List,fromJS} from "immutable";
 import {doSign,constroiMensagem,daSerieTalao,pad2,zeroFill} from "../aux";
 import Alert  from 'react-native';
  let serverUrl='http://192.168.2.1:5984';
+ // let serverUrl='http://192.168.2.158:5984';
+
  // let serverUrl='http://192.168.1.218:5984'
  let db= 's08'
 
@@ -57,6 +59,13 @@ export function  makeRequest (method, url) {
   }
 
 function saveDoc(doc,id) {
+  //Testes
+  if(doc=="Falha") {
+    return new Promise(function (resolve, reject) {
+                                            reject( "iuytfghjk")
+                                    })
+  }
+
   // --grava documento
   return new Promise(function (resolve, reject) {
     let htpMode='PUT'
@@ -153,8 +162,8 @@ function docMesa_atualiza(docMesa) {
 
                   }).catch(function (err) {
                     reject(err.statusText)
-                      throw Error("errrrr docMesa_atualiza");
-                      console.error('Augh, there was an error!', err.statusText);
+                      // throw Error("errrrr docMesa_atualiza");
+                      // console.error('Augh, there was an error!', err.statusText);
                     });
 
     }
@@ -191,25 +200,27 @@ function saveMesa(arrM) {
 
 
 function criaTalaoInsere(docHashAnt) {
-  let document=    docHashAnt.doc  ;
-  let hashAnterior=    docHashAnt.hashAnterior;
-  var d = new Date();
-  var h = zeroFill(d.getHours(), 2);
-  var m = zeroFill(d.getMinutes(), 2);
-  var sc = zeroFill(d.getSeconds(), 2);
+  return new Promise(function (resolve, reject) {
+    let document=    docHashAnt.doc  ;
+    let hashAnterior=    docHashAnt.hashAnterior;
+    var d = new Date();
+    var h = zeroFill(d.getHours(), 2);
+    var m = zeroFill(d.getMinutes(), 2);
+    var sc = zeroFill(d.getSeconds(), 2);
 
-  var ka = h.toString() + ':' + m.toString() + ':' + sc.toString();
-  //hora criacao hash
-  var mensagemAssin = constroiMensagem(document, d, hashAnterior);
-  delete document['_id'];
-  delete document['_rev'];
+    var ka = h.toString() + ':' + m.toString() + ':' + sc.toString();
+    //hora criacao hash
+    var mensagemAssin = constroiMensagem(document, d, hashAnterior);
+    delete document['_id'];
+    delete document['_rev'];
 
-  document.hash = doSign(mensagemAssin);
-  document.mensagem = mensagemAssin;
-  document.hora = ka;
-  document.data = [d.getFullYear(), 1 + d.getMonth(), d.getDate()];
-  document.type = "talao";
-  return saveDoc(document);//promessa
+    document.hash = doSign(mensagemAssin);
+    document.mensagem = mensagemAssin;
+    document.hora = ka;
+    document.data = [d.getFullYear(), 1 + d.getMonth(), d.getDate()];
+    document.type = "talao";
+    resolve (document);
+});
 
 }
 
@@ -221,31 +232,85 @@ function* fazGravacao(action) {
   {
     try {
         let docMesa=action.payload.document;
+        //docMesa_atualiza produz .numTalao e .serieTalao
         const docHashAnt = yield call(docMesa_atualiza,
                                       JSON.parse(JSON.stringify(docMesa)) );
 
-        //TODO por aqui if aberta chama docMesa_atualiza
-
+        //Nao insere nada na BD nem pesquisa a BD
+        //criaTalaoInsere --> é lento pq cria a assinatura
+        const talaoCriado= yield call(criaTalaoInsere,docHashAnt);
         if(docHashAnt!=null){
-              const preSave = yield call(saveDoc,
-                                          {type:"lixo"},
-                                          ("lixA"+docHashAnt.doc.serieTalao +"-"+
-                                          docHashAnt.doc.numTalao
-                                            ) );
+              try {
+                //  yield call(saveDoc,//"Falha",
+                //                             {type:"lixo",mesa:docHashAnt.doc.mesa},
+                //                             ("lixA"+docHashAnt.doc.serieTalao +"-"+
+                //                                 docHashAnt.doc.numTalao
+                //                                 ) );
+
+                try {
+                  // Inserir talao na BD
+                  const inserido=  yield call(saveDoc,
+                                              //"Falha");
+                                              talaoCriado);
+
+                  try {
+                    const talaoIn = yield call(saveMesa,{docMesa: docMesa,
+                                                          docTalao: talaoCriado.doc,
+                                                          idTalao: talaoCriado.response.id
+                                                            });
+                    yield put({type:  "GOTO_PAGINA",
+                              pagina:{pagina:"CONTA",
+                                      empregado:action.payload.empregado,
+                                      mesa:talaoIn.doc.mesa,
+                                      documento:talaoIn.doc,
+                                      contador:0,
+                                    }});
+
+                  } catch (e) {
+                    yield put({type: "GOTO_PAGINA_FAILED", message:"erro ao altera mesa na BD  "+
+                                                          " "+docHashAnt.doc.serieTalao +"-"+
+                                                          docHashAnt.doc.numTalao
+                              });
+                    yield put({type: "ADD_LOG", log:"erro ao altera mesa na BD   "+
+                                                          " "+docHashAnt.doc.serieTalao +"-"+
+                                                          docHashAnt.doc.numTalao+
+                                                          "  ->   "+docHashAnt.doc.mesa
+                              });
 
 
-              const inserido= yield call(criaTalaoInsere,docHashAnt);
-              const talaoIn = yield call(saveMesa,{docMesa: docMesa,
-                                                    docTalao: inserido.doc,
-                                                    idTalao: inserido.response.id
-                                                      });
-              yield put({type:  "GOTO_PAGINA",
-                        pagina:{pagina:"CONTA",
-                                empregado:action.payload.empregado,
-                                mesa:talaoIn.doc.mesa,
-                                documento:talaoIn.doc,
-                                contador:0,
-                              }});
+
+                  }
+
+
+
+                } catch (e) {
+                    //volta a tentar?
+                    yield put({type: "GOTO_PAGINA_FAILED", message:"erro  inserir talao na BD  "+
+                                                          " "+docHashAnt.doc.serieTalao +"-"+
+                                                          docHashAnt.doc.numTalao
+                              });
+                    yield put({type: "ADD_LOG", log:"erro  inserir talao na BD  "+
+                                                          " "+docHashAnt.doc.serieTalao +"-"+
+                                                          docHashAnt.doc.numTalao+
+                                                          "  ->   "+docHashAnt.doc.mesa
+                              });
+
+
+                }
+
+
+              } catch (e) {
+                yield put({type: "GOTO_PAGINA_FAILED", message:"erro  preSave  "+
+                                                      "lixA"+docHashAnt.doc.serieTalao +"-"+
+                                                      docHashAnt.doc.numTalao
+                          });
+                yield put({type: "ADD_LOG", log:"erro  preSave  "+
+                                                      "lixA"+docHashAnt.doc.serieTalao +"-"+
+                                                      docHashAnt.doc.numTalao+
+                                                      "  ->   "+docHashAnt.doc.mesa
+                          });
+              }
+
         }
 
    } catch (e) {
