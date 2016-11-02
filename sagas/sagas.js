@@ -3,18 +3,15 @@ import { call, put ,fork} from 'redux-saga/effects'
 import { Map ,List,fromJS} from "immutable";
 import {doSign,constroiMensagem,daSerieTalao,pad2,zeroFill} from "../aux";
 import Alert  from 'react-native';
-  let serverUrl='http://192.168.2.1:5984';
- // let serverUrl='http://192.168.2.158:5984';
+let serverUrl='http://192.168.2.1:5984';
+// let serverUrl='http://192.168.2.158:5984';
 
- // let serverUrl='http://192.168.1.218:5984'
- let db= 's08'
-
+// let serverUrl='http://192.168.1.218:5984'
+let db= 's08'
 
 // let serverUrl='http://192.168.1.104:5984';
 //let serverUrl='http://192.168.10.25:5984'
-
 //let serverUrl='http://192.168.1.218:5984';
-
 //let serverUrl='http://pbrito.no-ip.info:2030'
 
 
@@ -126,7 +123,6 @@ function docMesa_atualiza(docMesa) {
   return new Promise(function (resolve, reject) {
 
     let serieTalao=1;
-    // console.log(docMesa);
     if(docMesa.taloes==null ){
        serieTalao=daSerieTalao(docMesa);
     }
@@ -141,10 +137,10 @@ function docMesa_atualiza(docMesa) {
     if(docMesa.aberta == true) {
                   // --> tem de criar novo talao e gerar hash e fechar a mesa
                   // else nao faz nada so mostra talao
-                  makeRequest('GET', serverUrl+'/'+db+'/_design/myViews/_view/exp2?startkey=[' +
-                                                       (serieTalao + 1).toString() + ']' +
-                                                       '&endkey=[' +
-                                                       serieTalao + ']&descending=true&limit=1')
+                  makeRequest('GET', serverUrl+'/'+db+
+                                        '/_design/myViews/_view/exp2?startkey=[' +
+                                        (serieTalao + 1).toString() + ']' +
+                                        '&endkey=['+ serieTalao + ']&descending=true&limit=1')
                   .then(function (s) {
                     let hashAnterior="";
                     let idAnterior = "";
@@ -157,10 +153,10 @@ function docMesa_atualiza(docMesa) {
                             numTalao=s.rows[0].value.numTalao
                     docMesa.numTalao=numTalao+1;
                     docMesa.serieTalao = serieTalao;
-
                     resolve({doc: docMesa, hashAnterior: hashAnterior})
 
-                  }).catch(function (err) {
+                  })
+                  .catch(function (err) {
                     reject(err.statusText)
                       // throw Error("errrrr docMesa_atualiza");
                       // console.error('Augh, there was an error!', err.statusText);
@@ -169,13 +165,10 @@ function docMesa_atualiza(docMesa) {
     }
     else{
        console.log("nao faz nada kk");
-       resolve(" docMesa.aberta != true")
-            //fica igual
+       resolve(" docMesa.aberta != true");
     }
    })
 }
-
-
 
 function saveMesa(arrM) {
   let docMesa=arrM.docMesa;
@@ -196,8 +189,6 @@ function saveMesa(arrM) {
       }
   return saveDoc(docMesa);
 }
-
-
 
 function criaTalaoInsere(docHashAnt) {
   return new Promise(function (resolve, reject) {
@@ -225,7 +216,6 @@ function criaTalaoInsere(docHashAnt) {
 }
 
 
-
 function* fazGravacao(action) {
 
   if (action.payload.documento!= undefined)
@@ -243,22 +233,18 @@ function* fazGravacao(action) {
                 try {
                   //----------------   truque  --------------------------
                   //Se conseguir gravar sem erro quer dizer que mais ninguem alterou o documento
+                  //senao retorna erro que é apanhado no catch(outro foi mais rapido)
                   docMesa.lix=true;
                   const t2=yield call(saveDoc,docMesa)
-                  // const docMesaT2= t2.doc
-                  // delete docMesaT2.lix;
-                  // const testT =  yield call(saveDoc,
-                  //                             //"Falha");
-                  //                             docMesaT2);
                   //--------------  fim de truque   ------------------------
                   // Inserir talao na BD
                   const inserido=  yield call(saveDoc,
                                               talaoCriado);
 
                   try {
-                    const talaoIn = yield call(saveMesa,{docMesa: t2.doc,
+                    const talaoIn = yield call(saveMesa,{ docMesa : t2.doc,
                                                           docTalao: inserido.doc,
-                                                          idTalao: inserido.id
+                                                          idTalao : inserido.id
                                                             });
                     yield put({type:  "GOTO_PAGINA",
                               pagina:{pagina:"CONTA",
@@ -291,36 +277,16 @@ function* fazGravacao(action) {
                                                           docHashAnt.doc.numTalao+
                                                           "  ->   "+docHashAnt.doc.mesa
                               });
-                    const valA=yield call (makeRequest,'GET', serverUrl+'/'+db+"/lixA"+docHashAnt.doc.serieTalao +"-"+docHashAnt.doc.numTalao)
-
-                    yield call(saveDoc, { type:"lixo",mesa:valA.mesa,
-                                        _id:valA.id,_rev:valA.rev,
-                                        erro:true,mensagem:"erro inser talao preSave-OK " });
-                      //
-                      //
-                      yield put({type: "GOTO_PAGINA",
-                                 pagina:{pagina:"CONTA",
-                                        empregado:action.payload.empregado,
-                                        mesa:action.payload.mesa,
-                                        documento:action.payload.documento,
-                                        contador:0,
-                                         erro:true,
-                                      }
-                       });
-
+                    yield call(saveDoc, { type:"erro-save",
+                                          erro:true,
+                                          doc :docMesa,
+                                          mensagem:"erro inser talao preSave-OK "+
+                                                              docHashAnt.doc.serieTalao +"-"+
+                                                              docHashAnt.doc.numTalao});
                 }
-
-
-
-
-
-              }
-
-
+      }
 
    } catch (e) {
-
-
      var menErr="Sem mensagem de erro"
      if (!(e==null)) {menErr=e.toString()  }
      yield put({type: "ADD_LOG", log: "erro fazGravacao"+menErr  });
