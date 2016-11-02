@@ -3,14 +3,14 @@ import { call, put ,fork} from 'redux-saga/effects'
 import { Map ,List,fromJS} from "immutable";
 import {doSign,constroiMensagem,daSerieTalao,pad2,zeroFill} from "../aux";
 import Alert  from 'react-native';
- let serverUrl='http://192.168.2.1:5984';
+ // let serverUrl='http://192.168.2.1:5984';
  // let serverUrl='http://192.168.2.158:5984';
 
  // let serverUrl='http://192.168.1.218:5984'
- let db= 's08'
+ let db= 's08ou'
 
 
-// let serverUrl='http://192.168.1.104:5984';
+let serverUrl='http://192.168.1.104:5984';
 //let serverUrl='http://192.168.10.25:5984'
 
 //let serverUrl='http://192.168.1.218:5984';
@@ -169,17 +169,18 @@ function docMesa_atualiza(docMesa) {
     }
     else{
        console.log("nao faz nada kk");
-       resolve(null)
+       resolve(" docMesa.aberta != true")
             //fica igual
     }
    })
 }
 
+
+
 function saveMesa(arrM) {
   let docMesa=arrM.docMesa;
   let docTalao=arrM.docTalao;
   let idTalao =arrM.idTalao;
-
   for (var i = 0; i < docMesa.linhaConta.length; i++) {
         if (docMesa.linhaConta[i].orderReferences === undefined)
                 docMesa.linhaConta[i].orderReferences = [docTalao.serieTalao + "/" + docTalao.numTalao];
@@ -188,7 +189,6 @@ function saveMesa(arrM) {
       docMesa.aberta=false;
       docMesa.ultimaHashReference=docTalao.hash;
       docMesa.ultimaOrderReference= docTalao.serieTalao + "/" + docTalao.numTalao;
-
       if (docMesa.taloes == undefined) {
             docMesa.taloes = [{ "serieTalao": docTalao.serieTalao, "numTalao": docTalao.numTalao, "id": idTalao }];
       } else {
@@ -228,10 +228,10 @@ function criaTalaoInsere(docHashAnt) {
 
 function* fazGravacao(action) {
 
-  if (action.payload.document!= undefined)
+  if (action.payload.documento!= undefined)
   {
     try {
-        let docMesa=action.payload.document;
+        let docMesa=action.payload.documento;
         //docMesa_atualiza produz .numTalao e .serieTalao
         const docHashAnt = yield call(docMesa_atualiza,
                                       JSON.parse(JSON.stringify(docMesa)) );
@@ -240,23 +240,25 @@ function* fazGravacao(action) {
         //criaTalaoInsere --> é lento pq cria a assinatura
         const talaoCriado= yield call(criaTalaoInsere,docHashAnt);
         if(docHashAnt!=null){
-              try {
-                //  yield call(saveDoc,//"Falha",
-                //                             {type:"lixo",mesa:docHashAnt.doc.mesa},
-                //                             ("lixA"+docHashAnt.doc.serieTalao +"-"+
-                //                                 docHashAnt.doc.numTalao
-                //                                 ) );
-
                 try {
+                  //----------------   truque  --------------------------
+                  //Se conseguir gravar sem erro quer dizer que mais ninguem alterou o documento
+                  docMesa.lix=true;
+                  const t2=yield call(saveDoc,docMesa)
+                  // const docMesaT2= t2.doc
+                  // delete docMesaT2.lix;
+                  // const testT =  yield call(saveDoc,
+                  //                             //"Falha");
+                  //                             docMesaT2);
+                  //--------------  fim de truque   ------------------------
                   // Inserir talao na BD
                   const inserido=  yield call(saveDoc,
-                                              //"Falha");
                                               talaoCriado);
 
                   try {
-                    const talaoIn = yield call(saveMesa,{docMesa: docMesa,
-                                                          docTalao: talaoCriado.doc,
-                                                          idTalao: talaoCriado.response.id
+                    const talaoIn = yield call(saveMesa,{docMesa: t2.doc,
+                                                          docTalao: inserido.doc,
+                                                          idTalao: inserido.id
                                                             });
                     yield put({type:  "GOTO_PAGINA",
                               pagina:{pagina:"CONTA",
@@ -264,10 +266,11 @@ function* fazGravacao(action) {
                                       mesa:talaoIn.doc.mesa,
                                       documento:talaoIn.doc,
                                       contador:0,
+                                      erro:true
                                     }});
 
                   } catch (e) {
-                    yield put({type: "GOTO_PAGINA_FAILED", message:"erro ao altera mesa na BD  "+
+                    yield put({type: "GOTO_PAGINA_FAILED", message:"erro alt mesa preSave-OK"+
                                                           " "+docHashAnt.doc.serieTalao +"-"+
                                                           docHashAnt.doc.numTalao
                               });
@@ -276,42 +279,44 @@ function* fazGravacao(action) {
                                                           docHashAnt.doc.numTalao+
                                                           "  ->   "+docHashAnt.doc.mesa
                               });
-
-
-
                   }
 
-
-
                 } catch (e) {
-                    //volta a tentar?
-                    yield put({type: "GOTO_PAGINA_FAILED", message:"erro  inserir talao na BD  "+
+                    yield put({type: "GOTO_PAGINA_FAILED", message:"erro inser talao preSave-OK "+
                                                           " "+docHashAnt.doc.serieTalao +"-"+
                                                           docHashAnt.doc.numTalao
                               });
-                    yield put({type: "ADD_LOG", log:"erro  inserir talao na BD  "+
+                    yield put({type: "ADD_LOG", log:"erro inser talao preSave-OK"+
                                                           " "+docHashAnt.doc.serieTalao +"-"+
                                                           docHashAnt.doc.numTalao+
                                                           "  ->   "+docHashAnt.doc.mesa
                               });
+                    const valA=yield call (makeRequest,'GET', serverUrl+'/'+db+"/lixA"+docHashAnt.doc.serieTalao +"-"+docHashAnt.doc.numTalao)
 
+                    yield call(saveDoc, { type:"lixo",mesa:valA.mesa,
+                                        _id:valA.id,_rev:valA.rev,
+                                        erro:true,mensagem:"erro inser talao preSave-OK " });
+                      //
+                      //
+                      yield put({type: "GOTO_PAGINA",
+                                 pagina:{pagina:"CONTA",
+                                        empregado:action.payload.empregado,
+                                        mesa:action.payload.mesa,
+                                        documento:action.payload.documento,
+                                        contador:0,
+                                         erro:true,
+                                      }
+                       });
 
                 }
 
 
-              } catch (e) {
-                yield put({type: "GOTO_PAGINA_FAILED", message:"erro  preSave  "+
-                                                      "lixA"+docHashAnt.doc.serieTalao +"-"+
-                                                      docHashAnt.doc.numTalao
-                          });
-                yield put({type: "ADD_LOG", log:"erro  preSave  "+
-                                                      "lixA"+docHashAnt.doc.serieTalao +"-"+
-                                                      docHashAnt.doc.numTalao+
-                                                      "  ->   "+docHashAnt.doc.mesa
-                          });
+
+
+
               }
 
-        }
+
 
    } catch (e) {
 
@@ -409,7 +414,7 @@ function* showPagina(action) {
                                                mesas:resul2,
                                                empregadoAtual:action.payload.empregado,
                                                permissoes:resul.permissoes,
-                                               document:{},
+                                               documento:{},
                                              }});
      }
      catch (e) {
@@ -420,7 +425,7 @@ function* showPagina(action) {
      }
   }
   if (action.payload.pagina=="EMPREGADOS") {
-    console.log("----- pag EMPREGADOS  -----");
+    // console.log("----- pag EMPREGADOS  -----");
     try {
         yield put({type: "ADD_LOG", log: "faz pedido empregados" });
         const lista = yield call(all_users, action);
@@ -478,7 +483,7 @@ function* showPagina(action) {
               let nm=action.payload.documento;
               if (mesaDocAct.rows.length>0)nm=mesaDocAct.rows[0].value
               yield put({type:"GRAVA_CONTA",
-                      payload:{ document:nm,
+                      payload:{ documento:nm,
                                 empregado:action.payload.empregado,
                                 numContribuinte: "" ,
                                 nomeCliente: "" } })
