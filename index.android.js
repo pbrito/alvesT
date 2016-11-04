@@ -61,7 +61,7 @@ class alvesT extends Component {
       return (
         <View style={{ backgroundColor:"lightgray"}} >
           <Text style={{ padding:20}} >
-            {cnt2}Preencha os dados da factura sff    v1.0b
+            {cnt2}Preencha os dados da factura sff    v1.0c
           </Text>
           <View style={{ flex: 1,flexDirection: 'row',justifyContent: 'center'}}>
               <TextInput
@@ -299,8 +299,16 @@ desenhaConta(doc) {
             else {
               if ( this.state.contadorConta == 3) {
                   this.setState({contadorConta:0,dataComeco:0})
-                store.dispatch({
-                              type:"GOTO_HOME",payload:{}})
+                store.dispatch(
+                  //{type:"GOTO_HOME",payload:{}}
+                  {type:"SHOW_PAGINA",
+                                   payload:{
+                                     pagina:"EMPREGADOS",
+                                   }
+                                 }
+                )
+
+
               }
               else
                {
@@ -329,21 +337,23 @@ desenhaConta(doc) {
 
   render() {
 
-    var butao=(txt,id,fn)=> {
+    var butao=(txt,id,action,nvAlt)=> {
       let pagina=(store.getState().paginaActual[stateListLastIndex].pagina )
-      let lar=85;
-      if (pagina=="EMPREGADOS") {
-        lar=300;
-      }
+      let lar=55;
+      let alt=21;
+      if(nvAlt!=null)
+        alt=nvAlt;
       return(
-             <TouchableHighlight style={{height:91,backgroundColor:"coral",
-               borderWidth:2,flexWrap: 'wrap',
-                         width:80}}
-                         key={txt}
+             <TouchableHighlight
+               style={{height:alt,backgroundColor:"coral",
+                       borderWidth:2,flexWrap: 'wrap',
+                       width:lar
+                     }}
+               key ={txt}
                onPress={() =>{
-                 store.dispatch(fn)
-                }
-             }>
+                 store.dispatch(action)
+               }}
+             >
 
                 <Text>{txt}</Text>
 
@@ -351,9 +361,9 @@ desenhaConta(doc) {
         )
       }
 
-      var butaoEmpregado=(txt,id,fn)=> {
+      var butaoEmpregado=(txt,id,action)=> {
         let pagina=(store.getState().paginaActual[stateListLastIndex].pagina )
-        let lar=30
+        let lar=Dimensions.get('window').width*0.8
           return(
                <TouchableHighlight
 
@@ -362,11 +372,11 @@ desenhaConta(doc) {
                                       height:Dimensions.get('window').height*0.1,
                                        backgroundColor:"cyan",alignItems:"center",
                                        borderWidth: 2,justifyContent:"center",
-                                       width:Dimensions.get('window').width*0.8
+                                       width:lar
                                      }}
                          key={id}
                          onPress={() =>{
-                           store.dispatch(fn)
+                           store.dispatch(action)
                           }
                }>
                   <Text style={{fontSize:28}}>{txt}</Text>
@@ -424,7 +434,9 @@ desenhaConta(doc) {
               {conteudoEmpregados()}
 
             </View>
-            <View style={{flex:0.1,flexDirection:"row"}}>
+            <View style={{flex:0.1,
+                        width:Dimensions.get('window').width,
+                        }}>
                  {butao("xmlhttp","xmlhttp",
                                   {type:"SHOW_PAGINA",
                                                    payload:{
@@ -440,7 +452,7 @@ desenhaConta(doc) {
                                                    }
                                                  }
                         )}
-                  <Text>v1.0b</Text>
+                  <Text>v1.0c</Text>
             </View>
         </View>
         )
@@ -449,24 +461,38 @@ desenhaConta(doc) {
       if(pagina=="MESAS") {
         emp=(store.getState().paginaActual[stateListLastIndex].empregadoAtual).split(":")[1]
         let widD= Dimensions.get('window').width;
-        return (<View style={styles.container}>
-          <Text style={styles.welcome}>
-              {pagina}  {emp}  {paginaLength}
-          </Text>
-          <View style={{flex:1,backgroundColor:"cyan",flexDirection:"row",
-            alignItems: "stretch",flexWrap: 'wrap',
-          width:widD}}>
+        return (
+          <View style={styles.container}>
+            <TouchableHighlight  style={{
+                         //backgroundColor:"red",
+                          width:widD}}
+                           onPress={() =>{
+                             store.dispatch(
+                               {type:"SHOW_PAGINA",
+                                                payload:{
+                                                  pagina:"EMPREGADOS",
+                              }})
 
+                           }}
+                           >
+                <Text style=  {[styles.welcome,{height:50,  fontSize: 20}]}>
+                  {pagina}  {emp}  {paginaLength}
+                </Text>
+            </TouchableHighlight>
+            <View style={{flex:1,backgroundColor:"cyan",flexDirection:"row",
+                      alignItems: "stretch",flexWrap: 'wrap',
+                      width:widD}}>
                {this.desenhaMesasMenu(lastP)}
-          </View>
-          <View style={{flex:0.1,flexDirection:"row"}}>
-               {butao("xmlhttp","xmlhttp",
+             </View>
+             <View style={{flex:0.05,flexDirection:"row"}}>
+               {/*butao("xmlhttp","xmlhttp",
                                 {type:"SHOW_PAGINA",
                                                  payload:{
                                                    pagina:"EMPREGADOS",
                                                  }
                                                }
-                      )}
+                      )*/
+                    }
           </View>
         </View>)
       }
@@ -543,7 +569,7 @@ desenhaConta(doc) {
                                                    }
 
                                                  }
-                        )}
+                        ,55)}
                 {butao("log","log",
                                  {type:"SHOW_PAGINA",
                                                   payload:{
