@@ -232,41 +232,62 @@ function* fazGravacao(action) {
         const talaoCriado= yield call(criaTalaoInsere,docHashAnt);
         if(docHashAnt!=null){
                 try {
-                  //----------------   truque  --------------------------
+                  //----------------   truque (mesma mesa) --------------------------
                   //Se conseguir gravar sem erro quer dizer que mais ninguem alterou o documento
                   //senao retorna erro que é apanhado no catch(outro foi mais rapido)
                   docMesa.lix=true;
                   const t2=yield call(saveDoc,docMesa)
                   //--------------  fim de truque   ------------------------
-                  // Inserir talao na BD
-                  const inserido=  yield call(saveDoc,
-                                              talaoCriado);
+                  //------- verifica se o
+                  makeRequest('GET', serverUrl+'/'+db+
+                                        '/_design/myViews/_view/exp2?startkey=[' +
+                                        (saveDoc.serieTalao + 1).toString() + ']' +
+                                        '&endkey=['+ saveDoc.serieTalao + ']&descending=true&limit=1')
+                  .then(function (s) {
+                    var actNumTalao=0
+                    if (s.rows[0].value.numTalao !== undefined)
+                            actNumTalao=s.rows[0].value.numTalao
+                    if (saveDoc.numTalao==actNumTalao+1) {
+                      // Inserir talao na BD
+                      const inserido=  yield call(saveDoc,
+                                                  talaoCriado);
 
-                  try {
-                    const talaoIn = yield call(saveMesa,{ docMesa : t2.doc,
-                                                          docTalao: inserido.doc,
-                                                          idTalao : inserido.id
-                                                            });
-                    yield put({type:  "GOTO_PAGINA",
-                              pagina:{pagina:"CONTA",
-                                      empregado:action.payload.empregado,
-                                      mesa:talaoIn.doc.mesa,
-                                      documento:talaoIn.doc,
-                                      contador:0,
-                                      erro:true
-                                    }});
+                      try {
+                        const talaoIn = yield call(saveMesa,{ docMesa : t2.doc,
+                                                              docTalao: inserido.doc,
+                                                              idTalao : inserido.id
+                                                                });
+                        yield put({type:  "GOTO_PAGINA",
+                                  pagina:{pagina:"CONTA",
+                                          empregado:action.payload.empregado,
+                                          mesa:talaoIn.doc.mesa,
+                                          documento:talaoIn.doc,
+                                          contador:0,
+                                          erro:true
+                                        }});
 
-                  } catch (e) {
-                    yield put({type: "GOTO_PAGINA_FAILED", message:"erro alt mesa preSave-OK"+
-                                                          " "+docHashAnt.doc.serieTalao +"-"+
-                                                          docHashAnt.doc.numTalao
-                              });
-                    yield put({type: "ADD_LOG", log:"erro ao altera mesa na BD   "+
-                                                          " "+docHashAnt.doc.serieTalao +"-"+
-                                                          docHashAnt.doc.numTalao+
-                                                          "  ->   "+docHashAnt.doc.mesa
-                              });
-                  }
+                      } catch (e) {
+                        yield put({type: "GOTO_PAGINA_FAILED", message:"erro alt mesa preSave-OK"+
+                                                              " "+docHashAnt.doc.serieTalao +"-"+
+                                                              docHashAnt.doc.numTalao
+                                  });
+                        yield put({type: "ADD_LOG", log:"erro ao altera mesa na BD   "+
+                                                              " "+docHashAnt.doc.serieTalao +"-"+
+                                                              docHashAnt.doc.numTalao+
+                                                              "  ->   "+docHashAnt.doc.mesa
+                                  });
+                      }
+                    } else {
+
+                      //throw error
+                      throw new Error('Whoops! Alguem foi mais rapido !!!');
+                    }
+
+
+
+                  })
+
+
 
                 } catch (e) {
                     yield put({type: "GOTO_PAGINA_FAILED", message:"erro inser talao preSave-OK "+
