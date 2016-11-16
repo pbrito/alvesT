@@ -8,10 +8,10 @@ let serverUrl='http://192.168.2.1:5984';
 
 // let serverUrl='http://192.168.1.218:5984'
 let db= 's08'
-// let db= 's08ou'
+ // let db= 's08ou'
 
 // let serverUrl='http://192.168.1.104:5984';
-// let serverUrl='http://192.168.10.25:5984'
+ // let serverUrl='http://192.168.10.25:5984'
 //let serverUrl='http://192.168.1.218:5984';
 //let serverUrl='http://pbrito.no-ip.info:2030'
 
@@ -237,18 +237,22 @@ function* fazGravacao(action) {
                   //senao retorna erro que é apanhado no catch(outro foi mais rapido)
                   docMesa.lix=true;
                   const t2=yield call(saveDoc,docMesa)
+
                   //--------------  fim de truque   ------------------------
-                  //------- verifica se o
-                  makeRequest('GET', serverUrl+'/'+db+
+
+                  //------- verifica se o numTalao no servidor ainda é o mesmo
+                  const resulV = yield call( makeRequest,'GET', serverUrl+'/'+db+
                                         '/_design/myViews/_view/exp2?startkey=[' +
-                                        (saveDoc.serieTalao + 1).toString() + ']' +
-                                        '&endkey=['+ saveDoc.serieTalao + ']&descending=true&limit=1')
-                  .then(function (s) {
+                                        (docHashAnt.doc.serieTalao + 1).toString() + ']' +
+                                        '&endkey=['+ docHashAnt.doc.serieTalao + ']&descending=true&limit=1')
+
                     var actNumTalao=0
-                    if (s.rows[0].value.numTalao !== undefined)
-                            actNumTalao=s.rows[0].value.numTalao
-                    if (saveDoc.numTalao==actNumTalao+1) {
+
+                    if (resulV.rows[0].value.numTalao !== undefined)
+                            actNumTalao=resulV.rows[0].value.numTalao
+                    if (talaoCriado.numTalao == (actNumTalao+1) ) {
                       // Inserir talao na BD
+
                       const inserido=  yield call(saveDoc,
                                                   talaoCriado);
 
@@ -285,7 +289,7 @@ function* fazGravacao(action) {
 
 
 
-                  })
+
 
 
 
