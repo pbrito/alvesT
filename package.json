@@ -7,12 +7,12 @@
     "test": "jest"
   },
   "dependencies": {
-    "react": "15.3.2",
-    "react-native": "^0.36.0",
     "immutable": "^3.8.1",
     "jsrsasign": "^6.1.0",
+    "react": "15.4.0",
+    "react-native": "^0.39.0",
     "redux": "^3.6.0",
-    "redux-saga": "^0.11.1"
+    "redux-saga": "^0.13.0"
   },
   "jest": {
     "preset": "jest-react-native"
